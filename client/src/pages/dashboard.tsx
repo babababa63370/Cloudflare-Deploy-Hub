@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Plus, Github, HardDrive, Globe, MoreVertical, Trash2, RefreshCw } from "lucide-react";
+import { Plus, Github, HardDrive, Globe, MoreVertical, Trash2, RefreshCw, Activity, Layers, UploadCloud, Rocket } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,11 @@ import { StatusBadge } from "@/components/status-badge";
 import { useDeployments, useDeleteDeployment, useDeployAction } from "@/hooks/use-deployments";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,10 +28,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useState } from "react";
 
 export default function Dashboard() {
   const { data: deployments, isLoading } = useDeployments();
+  const { data: stats } = useQuery<{ cpuTemp: number; cpuUsage: number; memUsage: number; memTotal: number }>({ queryKey: ["/api/system/stats"] });
+  const { data: containers } = useQuery<any[]>({ queryKey: ["/api/docker/containers"] });
   const deleteMutation = useDeleteDeployment();
   const deployMutation = useDeployAction();
   const { toast } = useToast();
@@ -37,147 +43,145 @@ export default function Dashboard() {
     if (!deleteId) return;
     try {
       await deleteMutation.mutateAsync(deleteId);
-      toast({ title: "Deployment deleted successfully" });
+      toast({ title: "Déploiement supprimé" });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Failed to delete", description: e.message });
+      toast({ variant: "destructive", title: "Erreur", description: e.message });
     } finally {
       setDeleteId(null);
     }
   };
 
-  const handleDeploy = async (id: number) => {
-    try {
-      await deployMutation.mutateAsync(id);
-      toast({ title: "Deployment triggered" });
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Failed to deploy", description: e.message });
-    }
-  };
-
   return (
     <AppLayout>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Deployments</h1>
-          <p className="text-muted-foreground mt-1">Manage and monitor your Docker applications.</p>
-        </div>
-        <Button asChild className="hover-elevate active-elevate-2 shadow-lg shadow-primary/20">
-          <Link href="/deployments/new">
-            <Plus className="w-4 h-4 mr-2" />
-            New Deployment
-          </Link>
-        </Button>
+      <div className="mb-8">
+        <h1 className="text-3xl font-display font-bold text-foreground">Raspberry Pi Mini-Cloud</h1>
+        <p className="text-muted-foreground mt-1">Gérez votre serveur et vos déploiements.</p>
       </div>
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-48 rounded-xl" />
-          ))}
-        </div>
-      ) : deployments?.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 px-4 border-2 border-dashed border-border rounded-2xl bg-muted/30">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary">
-            <Rocket className="w-8 h-8" />
-          </div>
-          <h3 className="text-xl font-display font-bold mb-2">No deployments yet</h3>
-          <p className="text-muted-foreground text-center max-w-md mb-6">
-            Get started by creating your first Docker deployment. You can connect a GitHub repository or use a local Docker image.
-          </p>
-          <Button asChild variant="outline" className="hover-elevate active-elevate-2">
-            <Link href="/deployments/new">Create Deployment</Link>
-          </Button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {deployments?.map((deployment) => (
-            <div
-              key={deployment.id}
-              className="bg-card border border-border/50 rounded-xl p-5 shadow-sm hover-elevate transition-all group flex flex-col h-full relative overflow-hidden"
-            >
-              {/* Subtle top border gradient based on status */}
-              <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r 
-                ${deployment.status === 'running' ? 'from-green-500/50 to-emerald-500/50' : 
-                  deployment.status === 'failed' ? 'from-red-500/50 to-orange-500/50' : 
-                  deployment.status === 'pending' ? 'from-amber-500/50 to-yellow-500/50' : 
-                  'from-slate-500/50 to-gray-500/50'}`} 
-              />
-              
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex gap-3 items-center">
-                  <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-secondary-foreground border border-border/50">
-                    {deployment.deploymentType === 'github' ? (
-                      <Github className="w-5 h-5" />
-                    ) : (
-                      <HardDrive className="w-5 h-5" />
-                    )}
-                  </div>
-                  <div>
-                    <Link href={`/deployments/${deployment.id}`} className="font-display font-bold text-lg hover:text-primary transition-colors">
-                      {deployment.name}
-                    </Link>
-                    <div className="flex items-center text-xs text-muted-foreground mt-0.5">
-                      <Globe className="w-3 h-3 mr-1" />
-                      {deployment.domain}
-                    </div>
-                  </div>
+      <Tabs defaultValue="status" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+          <TabsTrigger value="status">
+            <Activity className="w-4 h-4 mr-2" />
+            Status
+          </TabsTrigger>
+          <TabsTrigger value="apps">
+            <Layers className="w-4 h-4 mr-2" />
+            Apps
+          </TabsTrigger>
+          <TabsTrigger value="deploy">
+            <UploadCloud className="w-4 h-4 mr-2" />
+            Deploy
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="status" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">CPU Usage & Temp</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-between mb-2 text-sm">
+                  <span>Usage</span>
+                  <span>{stats?.cpuUsage?.toFixed(1) || 0}%</span>
                 </div>
+                <Progress value={stats?.cpuUsage || 0} className="mb-4" />
+                <div className="flex justify-between text-sm">
+                  <span>Temperature</span>
+                  <span className={(stats?.cpuTemp || 0) > 60 ? "text-orange-500" : "text-green-500"}>
+                    {stats?.cpuTemp || 0}°C
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">RAM Usage</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-between mb-2 text-sm">
+                  <span>{((stats?.memUsage || 0) / 1024 / 1024 / 1024).toFixed(2)} GB / {((stats?.memTotal || 1) / 1024 / 1024 / 1024).toFixed(2)} GB</span>
+                  <span>{(((stats?.memUsage || 0) / (stats?.memTotal || 1)) * 100).toFixed(1)}%</span>
+                </div>
+                <Progress value={((stats?.memUsage || 0) / (stats?.memTotal || 1)) * 100} />
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground hover:text-foreground">
-                      <MoreVertical className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild className="cursor-pointer">
-                      <Link href={`/deployments/${deployment.id}`}>View Details</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => handleDeploy(deployment.id)}
-                      disabled={deployMutation.isPending}
-                      className="cursor-pointer"
-                    >
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      Re-deploy
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => setDeleteId(deployment.id)}
-                      className="text-destructive focus:text-destructive cursor-pointer"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-
-              <div className="mt-auto pt-4 border-t border-border/50 flex items-center justify-between">
-                <StatusBadge status={deployment.status} />
-                <span className="text-xs text-muted-foreground">
-                  Updated {deployment.updatedAt ? formatDistanceToNow(new Date(deployment.updatedAt), { addSuffix: true }) : 'never'}
-                </span>
-              </div>
+        <TabsContent value="apps">
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-48 rounded-xl" />)}
             </div>
-          ))}
-        </div>
-      )}
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {deployments?.map((deployment) => (
+                <Card key={deployment.id} className="relative overflow-hidden group">
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start">
+                      <div className="flex gap-3 items-center">
+                        <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-secondary-foreground">
+                          {deployment.deploymentType === 'github' ? <Github className="w-5 h-5" /> : <HardDrive className="w-5 h-5" />}
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg">{deployment.name}</CardTitle>
+                          <p className="text-xs text-muted-foreground">{deployment.domain}</p>
+                        </div>
+                      </div>
+                      <StatusBadge status={deployment.status} />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex gap-2 mt-4">
+                      <Button size="sm" variant="outline" className="flex-1" onClick={() => toast({ title: "Démarrage..." })}>Start</Button>
+                      <Button size="sm" variant="outline" className="flex-1" onClick={() => toast({ title: "Arrêt..." })}>Stop</Button>
+                      <Button size="sm" variant="destructive" className="px-2" onClick={() => setDeleteId(deployment.id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="deploy">
+          <Card>
+            <CardHeader>
+              <CardTitle>Nouveau Déploiement</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Button asChild variant="outline" className="h-24 flex flex-col gap-2">
+                  <Link href="/deployments/new">
+                    <Github className="w-6 h-6" />
+                    Connecter GitHub
+                  </Link>
+                </Button>
+                <Button variant="outline" className="h-24 flex flex-col gap-2" onClick={() => toast({ title: "Bientôt disponible" })}>
+                  <UploadCloud className="w-6 h-6" />
+                  Upload Dossier
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle>Confirmation</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete this deployment and stop the running containers. DNS records may need to be cleaned up manually.
+              Voulez-vous vraiment supprimer ce déploiement ?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? "Deleting..." : "Delete Deployment"}
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+              Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -185,6 +189,3 @@ export default function Dashboard() {
     </AppLayout>
   );
 }
-
-// Ensure Rocket is imported if used in empty state
-import { Rocket } from "lucide-react";

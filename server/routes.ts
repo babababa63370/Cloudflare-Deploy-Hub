@@ -4,11 +4,51 @@ import { storage } from "./storage";
 import { CloudflareService } from "./cloudflare";
 import { api } from "@shared/routes";
 import { z } from "zod";
+import Docker from "dockerode";
+import si from "systeminformation";
+import multer from "multer";
+import path from "path";
+
+const docker = new Docker({ socketPath: '/var/run/docker.sock' });
+const upload = multer({ dest: 'uploads/' });
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // System Stats
+  app.get(api.system.stats.path, async (_req, res) => {
+    try {
+      const stats = await storage.getSystemStats();
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get system stats" });
+    }
+  });
+
+  // Docker Containers
+  app.get(api.docker.containers.path, async (_req, res) => {
+    try {
+      const containers = await docker.listContainers({ all: true });
+      res.json(containers);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to list containers" });
+    }
+  });
+
+  // Upload
+  app.post(api.upload.path, upload.single('file'), (req, res) => {
+    if (!req.file) return res.status(400).json({ success: false });
+    res.json({ success: true, filename: req.file.filename });
+  });
+
+  // Webhook
+  app.post(api.webhook.path, async (_req, res) => {
+    // Logic for git pull would go here
+    res.json({ success: true });
+  });
+
+  // ... existing routes (Cloudflare, Deployments) ...
   app.get(api.cloudflare.get.path, async (req, res) => {
     try {
       const config = await storage.getCloudflareConfig();

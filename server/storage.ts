@@ -29,6 +29,8 @@ export interface IStorage {
 
   getDeploymentLogs(deploymentId: number): Promise<DeploymentLogResponse[]>;
   addDeploymentLog(log: InsertDeploymentLog): Promise<DeploymentLogResponse>;
+  
+  getSystemStats(): Promise<{ cpuTemp: number; cpuUsage: number; memUsage: number; memTotal: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -101,6 +103,15 @@ export class DatabaseStorage implements IStorage {
   async addDeploymentLog(log: InsertDeploymentLog): Promise<DeploymentLogResponse> {
     const [created] = await db.insert(deploymentLogs).values(log).returning();
     return created;
+  }
+
+  async getSystemStats() {
+    return {
+      cpuTemp: 45,
+      cpuUsage: 12,
+      memUsage: 512 * 1024 * 1024,
+      memTotal: 2048 * 1024 * 1024
+    };
   }
 }
 

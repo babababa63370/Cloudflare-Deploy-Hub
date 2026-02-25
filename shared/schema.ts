@@ -17,13 +17,15 @@ export const deployments = pgTable("deployments", {
   name: text("name").notNull(),
   domain: text("domain").notNull(),
   status: text("status").notNull(),
-  deploymentType: text("deployment_type").notNull(),
+  deploymentType: text("deployment_type").notNull(), // 'github', 'local' (upload), 'docker'
   dockerImage: text("docker_image"),
   githubRepo: text("github_repo"),
   githubBranch: text("github_branch"),
   port: text("port").notNull().default("3000"),
   dnsRecordId: text("dns_record_id"),
   isProxied: boolean("is_proxied").default(true),
+  containerId: text("container_id"),
+  restartPolicy: text("restart_policy").default("always"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

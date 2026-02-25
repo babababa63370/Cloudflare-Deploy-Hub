@@ -163,6 +163,43 @@ export const api = {
       },
     },
   },
+  system: {
+    stats: {
+      method: 'GET' as const,
+      path: '/api/system/stats' as const,
+      responses: {
+        200: z.object({
+          cpuTemp: z.number(),
+          cpuUsage: z.number(),
+          memUsage: z.number(),
+          memTotal: z.number(),
+        }),
+      },
+    },
+  },
+  docker: {
+    containers: {
+      method: 'GET' as const,
+      path: '/api/docker/containers' as const,
+      responses: {
+        200: z.array(z.any()),
+      },
+    },
+  },
+  upload: {
+    method: 'POST' as const,
+    path: '/api/deploy/upload' as const,
+    responses: {
+      200: z.object({ success: z.boolean(), filename: z.string() }),
+    },
+  },
+  webhook: {
+    method: 'POST' as const,
+    path: '/api/deploy/webhook' as const,
+    responses: {
+      200: z.object({ success: z.boolean() }),
+    },
+  },
 };
 
 export function buildUrl(path: string, params?: Record<string, string | number>): string {
