@@ -12,7 +12,11 @@ export async function registerRoutes(
   app.get(api.cloudflare.get.path, async (req, res) => {
     try {
       const config = await storage.getCloudflareConfig();
-      res.json(config || null);
+      if (!config) {
+        return res.json(null);
+      }
+      const { apiToken: _omit, ...safeConfig } = config as any;
+      res.json({ ...safeConfig, apiToken: "••••••••" });
     } catch (error) {
       res.status(500).json({ message: "Failed to get Cloudflare configuration" });
     }
@@ -22,7 +26,8 @@ export async function registerRoutes(
     try {
       const input = api.cloudflare.create.input.parse(req.body);
       const config = await storage.createCloudflareConfig(input);
-      res.status(201).json(config);
+      const { apiToken: _omit, ...safeConfig } = config as any;
+      res.status(201).json({ ...safeConfig, apiToken: "••••••••" });
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({
@@ -37,9 +42,13 @@ export async function registerRoutes(
   app.put(api.cloudflare.update.path, async (req, res) => {
     try {
       const id = Number(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid configuration id" });
+      }
       const input = api.cloudflare.update.input.parse(req.body);
       const config = await storage.updateCloudflareConfig(id, input);
-      res.json(config);
+      const { apiToken: _omit, ...safeConfig } = config as any;
+      res.json({ ...safeConfig, apiToken: "••••••••" });
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({
@@ -80,6 +89,9 @@ export async function registerRoutes(
   app.get(api.deployments.get.path, async (req, res) => {
     try {
       const id = Number(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid deployment id" });
+      }
       const deploymentWithLogs = await storage.getDeploymentWithLogs(id);
       
       if (!deploymentWithLogs) {
@@ -122,6 +134,9 @@ export async function registerRoutes(
   app.put(api.deployments.update.path, async (req, res) => {
     try {
       const id = Number(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid deployment id" });
+      }
       const input = api.deployments.update.input.parse(req.body);
       const deployment = await storage.updateDeployment(id, input);
       
@@ -146,6 +161,9 @@ export async function registerRoutes(
   app.delete(api.deployments.delete.path, async (req, res) => {
     try {
       const id = Number(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid deployment id" });
+      }
       const deployment = await storage.getDeployment(id);
       
       if (!deployment) {
@@ -170,6 +188,9 @@ export async function registerRoutes(
   app.post(api.deployments.deploy.path, async (req, res) => {
     try {
       const id = Number(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ success: false, message: "Invalid deployment id" });
+      }
       const deployment = await storage.getDeployment(id);
       
       if (!deployment) {
@@ -213,6 +234,9 @@ export async function registerRoutes(
   app.get(api.deployments.logs.path, async (req, res) => {
     try {
       const id = Number(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid deployment id" });
+      }
       const logs = await storage.getDeploymentLogs(id);
       res.json(logs);
     } catch (error) {
