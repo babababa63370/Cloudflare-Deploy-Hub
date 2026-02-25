@@ -1,0 +1,24 @@
+services:
+  app:
+    build: .
+    ports:
+      - "5007:5007"
+    environment:
+      - DATABASE_URL=postgres://user:pass@db:5432/dashboard
+      - NODE_ENV=production
+    depends_on:
+      - db
+    restart: always
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=pass
+      - POSTGRES_DB=dashboard
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  postgres_data:
