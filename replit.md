@@ -55,4 +55,11 @@ npm run db:push  # Push schema changes to database
 
 - Cloudflare API tokens are stored in the database but **never returned in full to clients** - they are redacted (shown as `••••••••`) in all API responses
 - All route parameters are validated and return 400 for invalid inputs
-- API tokens are also redacted in server-side request logs
+- API tokens are also redacted in server-wide request logs
+- Docker socket access is disabled (not available in Replit environment); Docker endpoints return a 503 with a clear message
+- File uploads are restricted to allowed MIME types (images, plain text, JSON) and capped at 5MB
+
+## Replit Notes
+
+- Docker container management is unavailable in Replit's sandbox environment; those endpoints return 503
+- Database is provisioned via Replit's built-in PostgreSQL integration (DATABASE_URL is set automatically)

@@ -4,13 +4,22 @@ import { storage } from "./storage";
 import { CloudflareService } from "./cloudflare";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import Docker from "dockerode";
-import si from "systeminformation";
 import multer from "multer";
-import path from "path";
 
-const docker = new Docker({ socketPath: '/var/run/docker.sock' });
-const upload = multer({ dest: 'uploads/' });
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/gif", "text/plain", "application/json"];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+const upload = multer({
+  dest: "uploads/",
+  limits: { fileSize: MAX_FILE_SIZE },
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("File type not allowed"));
+    }
+  },
+});
 
 export async function registerRoutes(
   httpServer: Server,
@@ -26,14 +35,9 @@ export async function registerRoutes(
     }
   });
 
-  // Docker Containers
-  app.get(api.docker.containers.path, async (_req, res) => {
-    try {
-      const containers = await docker.listContainers({ all: true });
-      res.json(containers);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to list containers" });
-    }
+  // Docker Containers — not available in this environment
+  app.get(api.docker.containers.path, (_req, res) => {
+    res.status(503).json({ message: "Docker is not available in this environment" });
   });
 
   // Upload
