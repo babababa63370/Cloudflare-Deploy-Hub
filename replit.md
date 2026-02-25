@@ -59,6 +59,8 @@ npm run db:push  # Push schema changes to database
 - Docker socket access is disabled (not available in Replit environment); Docker endpoints return a 503 with a clear message
 - File uploads are restricted to allowed MIME types (images, plain text, JSON) and capped at 5MB
 
+- IP Whitelisting: Only access from 92.171.193.28 is allowed.
+
 ## Replit Notes
 
 - Docker container management is unavailable in Replit's sandbox environment; those endpoints return 503

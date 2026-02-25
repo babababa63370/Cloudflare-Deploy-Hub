@@ -22,6 +22,21 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
+// IP Whitelisting
+const ALLOWED_IP = "92.171.193.28";
+app.use((req, res, next) => {
+  // Check x-forwarded-for if behind a proxy (like Replit's edge or Docker)
+  const clientIp = (req.headers["x-forwarded-for"] as string || req.socket.remoteAddress || "").split(',')[0].trim();
+  
+  // Allow localhost for development and the specific public IP
+  if (clientIp === ALLOWED_IP || clientIp === "::1" || clientIp === "127.0.0.1" || clientIp === "::ffff:127.0.0.1") {
+    return next();
+  }
+  
+  log(`Blocked access from unauthorized IP: ${clientIp}`, "security");
+  res.status(403).send("Forbidden: Access restricted to authorized IP.");
+});
+
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
